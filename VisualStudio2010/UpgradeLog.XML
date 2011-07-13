@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="freeglut">
+</Property><Property Name="Solution File" Value="C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\freeglut.sln">
+</Property><Property Name="Date" Value="den 28 mars 2011">
+</Property><Property Name="Time" Value="17:50">
+</Property></Properties><Event ErrorLevel="0" Project="freeglut" Source="freeglut.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\freeglut.vcproj'.">
+</Event><Event ErrorLevel="1" Project="freeglut" Source="freeglut.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="freeglut" Source="freeglut.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\freeglut.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="freeglut" Source="freeglut.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="CallbackMaker" Source="CallbackMaker\CallbackMaker.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\CallbackMaker\CallbackMaker.vcproj'.">
+</Event><Event ErrorLevel="1" Project="CallbackMaker" Source="CallbackMaker\CallbackMaker.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="CallbackMaker" Source="CallbackMaker\CallbackMaker.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\CallbackMaker\CallbackMaker.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="CallbackMaker" Source="CallbackMaker\CallbackMaker.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="Fractals" Source="Fractals\Fractals.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\Fractals\Fractals.vcproj'.">
+</Event><Event ErrorLevel="1" Project="Fractals" Source="Fractals\Fractals.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="Fractals" Source="Fractals\Fractals.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\Fractals\Fractals.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="Fractals" Source="Fractals\Fractals.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="Fractals_random" Source="Fractals_random\Fractals_random.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\Fractals_random\Fractals_random.vcproj'.">
+</Event><Event ErrorLevel="1" Project="Fractals_random" Source="Fractals_random\Fractals_random.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="Fractals_random" Source="Fractals_random\Fractals_random.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\Fractals_random\Fractals_random.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="Fractals_random" Source="Fractals_random\Fractals_random.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="Lorenz" Source="Lorenz\Lorenz.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\Lorenz\Lorenz.vcproj'.">
+</Event><Event ErrorLevel="1" Project="Lorenz" Source="Lorenz\Lorenz.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="Lorenz" Source="Lorenz\Lorenz.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\Lorenz\Lorenz.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="Lorenz" Source="Lorenz\Lorenz.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="One" Source="One\One.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\One\One.vcproj'.">
+</Event><Event ErrorLevel="1" Project="One" Source="One\One.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="One" Source="One\One.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\One\One.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="One" Source="One\One.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="shapes" Source="shapes\shapes.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\shapes\shapes.vcproj'.">
+</Event><Event ErrorLevel="1" Project="shapes" Source="shapes\shapes.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="shapes" Source="shapes\shapes.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\shapes\shapes.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="shapes" Source="shapes\shapes.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="smooth_opengl3" Source="smooth_opengl3\smooth_opengl3.vcproj" Description="Converting project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\smooth_opengl3\smooth_opengl3.vcproj'.">
+</Event><Event ErrorLevel="1" Project="smooth_opengl3" Source="smooth_opengl3\smooth_opengl3.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="0" Project="smooth_opengl3" Source="smooth_opengl3\smooth_opengl3.vcproj" Description="Done converting to new project file 'C:\Users\petter\Desktop\freeglut-2.6.0\VisualStudio2008\smooth_opengl3\smooth_opengl3.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="smooth_opengl3" Source="smooth_opengl3\smooth_opengl3.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="" Source="freeglut.sln" Description="Solution converted successfully">
+</Event><Event ErrorLevel="3" Project="" Source="freeglut.sln" Description="Converted">
+</Event></UpgradeLog>
