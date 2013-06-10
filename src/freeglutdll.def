@@ -1,5 +1,5 @@
 LIBRARY freeglut
-VERSION 2.6
+VERSION 2.8
 EXPORTS
 	glutInit
 	glutInitWindowPosition
@@ -139,10 +139,17 @@ EXPORTS
 	glutGetProcAddress
 	glutExit
 	glutFullScreenToggle
+	glutLeaveFullScreen
 	glutGetModeValues
 	glutInitContextFlags
 	glutInitContextVersion
 	glutInitContextProfile
+        glutInitErrorFunc
+        glutInitWarningFunc
 	__glutInitWithExit
 	__glutCreateWindowWithExit
 	__glutCreateMenuWithExit
+	glutMultiButtonFunc
+	glutMultiEntryFunc
+	glutMultiMotionFunc
+	glutMultiPassiveFunc

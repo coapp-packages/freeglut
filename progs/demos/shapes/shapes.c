@@ -13,6 +13,8 @@
       -    <tt>Esc &nbsp;</tt> Quit
       -    <tt>q Q &nbsp;</tt> Quit
       -    <tt>i I &nbsp;</tt> Show info
+      -    <tt>p P &nbsp;</tt> Toggle perspective or orthographic projection
+      -    <tt>r R &nbsp;</tt> Toggle fixed or animated rotation around model X-axis
       -    <tt>= + &nbsp;</tt> Increase \a slices
       -    <tt>- _ &nbsp;</tt> Decreate \a slices
       -    <tt>, < &nbsp;</tt> Decreate \a stacks
@@ -46,6 +48,14 @@
 #include <crtdbg.h>
 #endif
 
+/* report GL errors, if any, to stderr */
+void checkError(const char *functionName)
+{
+    GLenum error;
+    while (( error = glGetError() ) != GL_NO_ERROR) {
+        fprintf (stderr, "GL error 0x%X detected in %s\n", error, functionName);
+    }
+}
 /*
  * This macro is only intended to be used on arrays, of course.
  */
@@ -60,89 +70,121 @@ static int function_index;
 static int slices = 16;
 static int stacks = 16;
 static double irad = .25;
-static double orad = 1.0;
+static double orad = 1.0;   /* doubles as size for objects other than Torus */
 static int depth = 4;
 static double offset[ 3 ] = { 0, 0, 0 };
 static GLboolean show_info = GL_TRUE;
+static float ar;
+static GLboolean persProject = GL_TRUE;
+static GLboolean animateXRot = GL_FALSE;
+
+/*
+ * Enum to tell drawSizeInfo what to draw for each object
+ */
+#define GEO_NO_SIZE 0
+#define GEO_SIZE 1
+#define GEO_SCALE 2
+#define GEO_INNER_OUTER_RAD 4
+#define GEO_RAD 8
+#define GEO_BASE_HEIGHT 16
+#define GEO_RAD_HEIGHT 32
 
 /*
  * These one-liners draw particular objects, fetching appropriate
  * information from the above globals.  They are just thin wrappers
- * for the OpenGLUT objects.
+ * for the FreeGLUT objects.
  */
-static void drawSolidTetrahedron(void)         { glutSolidTetrahedron ();                      }
-static void drawWireTetrahedron(void)          { glutWireTetrahedron ();                       }
-static void drawSolidCube(void)                { glutSolidCube(1);                             }
-static void drawWireCube(void)                 { glutWireCube(1);                              }
-static void drawSolidOctahedron(void)          { glutSolidOctahedron ();                       }
-static void drawWireOctahedron(void)           { glutWireOctahedron ();                        }
-static void drawSolidDodecahedron(void)        { glutSolidDodecahedron ();                     }
-static void drawWireDodecahedron(void)         { glutWireDodecahedron ();                      }
-static void drawSolidRhombicDodecahedron(void) { glutSolidRhombicDodecahedron ();              }
-static void drawWireRhombicDodecahedron(void)  { glutWireRhombicDodecahedron ();               }
-static void drawSolidIcosahedron(void)         { glutSolidIcosahedron ();                      }
-static void drawWireIcosahedron(void)          { glutWireIcosahedron ();                       }
-static void drawSolidSierpinskiSponge(void)    { glutSolidSierpinskiSponge (depth, offset, 1); }
-static void drawWireSierpinskiSponge(void)     { glutWireSierpinskiSponge (depth, offset, 1);  }
-static void drawSolidTeapot(void)              { glutSolidTeapot(1);                           }
-static void drawWireTeapot(void)               { glutWireTeapot(1);                            }
-static void drawSolidTorus(void)               { glutSolidTorus(irad,orad,slices,stacks);      }
-static void drawWireTorus(void)                { glutWireTorus (irad,orad,slices,stacks);      }
-static void drawSolidSphere(void)              { glutSolidSphere(1,slices,stacks);             }
-static void drawWireSphere(void)               { glutWireSphere(1,slices,stacks);              }
-static void drawSolidCone(void)                { glutSolidCone(1,1,slices,stacks);             }
-static void drawWireCone(void)                 { glutWireCone(1,1,slices,stacks);              }
-static void drawSolidCylinder(void)            { glutSolidCylinder(1,1,slices,stacks);         }
-static void drawWireCylinder(void)             { glutWireCylinder(1,1,slices,stacks);          }
+static void drawSolidTetrahedron(void)         { glutSolidTetrahedron ();                        }
+static void drawWireTetrahedron(void)          { glutWireTetrahedron ();                         }
+static void drawSolidCube(void)                { glutSolidCube(orad);                            }  /* orad doubles as size input */
+static void drawWireCube(void)                 { glutWireCube(orad);                             }  /* orad doubles as size input */
+static void drawSolidOctahedron(void)          { glutSolidOctahedron ();                         }
+static void drawWireOctahedron(void)           { glutWireOctahedron ();                          }
+static void drawSolidDodecahedron(void)        { glutSolidDodecahedron ();                       }
+static void drawWireDodecahedron(void)         { glutWireDodecahedron ();                        }
+static void drawSolidRhombicDodecahedron(void) { glutSolidRhombicDodecahedron ();                }
+static void drawWireRhombicDodecahedron(void)  { glutWireRhombicDodecahedron ();                 }
+static void drawSolidIcosahedron(void)         { glutSolidIcosahedron ();                        }
+static void drawWireIcosahedron(void)          { glutWireIcosahedron ();                         }
+static void drawSolidSierpinskiSponge(void)    { glutSolidSierpinskiSponge (depth, offset, orad);}  /* orad doubles as size input */
+static void drawWireSierpinskiSponge(void)     { glutWireSierpinskiSponge (depth, offset, orad); }  /* orad doubles as size input */
+static void drawSolidTorus(void)               { glutSolidTorus(irad,orad,slices,stacks);        }
+static void drawWireTorus(void)                { glutWireTorus (irad,orad,slices,stacks);        }
+static void drawSolidSphere(void)              { glutSolidSphere(orad,slices,stacks);            }  /* orad doubles as size input */
+static void drawWireSphere(void)               { glutWireSphere(orad,slices,stacks);             }  /* orad doubles as size input */
+static void drawSolidCone(void)                { glutSolidCone(irad,orad,slices,stacks);         }  /* irad doubles as base input, and orad as height input */
+static void drawWireCone(void)                 { glutWireCone(irad,orad,slices,stacks);          }  /* irad doubles as base input, and orad as height input */
+static void drawSolidCylinder(void)            { glutSolidCylinder(irad,orad,slices,stacks);     }  /* irad doubles as radius input, and orad as height input */
+static void drawWireCylinder(void)             { glutWireCylinder(irad,orad,slices,stacks);      }  /* irad doubles as radius input, and orad as height input */
+static void drawSolidTeapot(void)
+{
+    /* per Glut manpage, it should be noted that the teapot is rendered
+     * with clockwise winding for front facing polygons...
+     */
+    glFrontFace(GL_CW);
+    glutSolidTeapot(orad);  /* orad doubles as size input */
+    glFrontFace(GL_CCW);
+}
+static void drawWireTeapot(void)
+{
+    /* per Glut manpage, it should be noted that the teapot is rendered
+     * with clockwise winding for front facing polygons...
+     */
+    glFrontFace(GL_CW);
+    glutWireTeapot(orad);  /* orad doubles as size input */
+    glFrontFace(GL_CCW);
+}
 
-#define RADIUS    1.0f
+#define RADIUSFAC    0.70710678118654752440084436210485f
 
 static void drawSolidCuboctahedron(void)
 {
+  GLfloat radius = RADIUSFAC*(GLfloat)orad; /* orad doubles as size */
   glBegin( GL_TRIANGLES );
-    glNormal3d( 0.577350269189, 0.577350269189, 0.577350269189); glVertex3d( RADIUS, RADIUS, 0.0 ); glVertex3d( 0.0, RADIUS, RADIUS ); glVertex3d( RADIUS, 0.0, RADIUS );
-    glNormal3d( 0.577350269189, 0.577350269189,-0.577350269189); glVertex3d( RADIUS, RADIUS, 0.0 ); glVertex3d( RADIUS, 0.0,-RADIUS ); glVertex3d( 0.0, RADIUS,-RADIUS );
-    glNormal3d( 0.577350269189,-0.577350269189, 0.577350269189); glVertex3d( RADIUS,-RADIUS, 0.0 ); glVertex3d( RADIUS, 0.0, RADIUS ); glVertex3d( 0.0,-RADIUS, RADIUS );
-    glNormal3d( 0.577350269189,-0.577350269189,-0.577350269189); glVertex3d( RADIUS,-RADIUS, 0.0 ); glVertex3d( 0.0,-RADIUS,-RADIUS ); glVertex3d( RADIUS, 0.0,-RADIUS );
-    glNormal3d(-0.577350269189, 0.577350269189, 0.577350269189); glVertex3d(-RADIUS, RADIUS, 0.0 ); glVertex3d(-RADIUS, 0.0, RADIUS ); glVertex3d( 0.0, RADIUS, RADIUS );
-    glNormal3d(-0.577350269189, 0.577350269189,-0.577350269189); glVertex3d(-RADIUS, RADIUS, 0.0 ); glVertex3d( 0.0, RADIUS,-RADIUS ); glVertex3d(-RADIUS, 0.0,-RADIUS );
-    glNormal3d(-0.577350269189,-0.577350269189, 0.577350269189); glVertex3d(-RADIUS,-RADIUS, 0.0 ); glVertex3d( 0.0,-RADIUS, RADIUS ); glVertex3d(-RADIUS, 0.0, RADIUS );
-    glNormal3d(-0.577350269189,-0.577350269189,-0.577350269189); glVertex3d(-RADIUS,-RADIUS, 0.0 ); glVertex3d(-RADIUS, 0.0,-RADIUS ); glVertex3d( 0.0,-RADIUS,-RADIUS );
+    glNormal3d( 0.577350269189, 0.577350269189, 0.577350269189); glVertex3d( radius, radius, 0.0 ); glVertex3d( 0.0, radius, radius ); glVertex3d( radius, 0.0, radius );
+    glNormal3d( 0.577350269189, 0.577350269189,-0.577350269189); glVertex3d( radius, radius, 0.0 ); glVertex3d( radius, 0.0,-radius ); glVertex3d( 0.0, radius,-radius );
+    glNormal3d( 0.577350269189,-0.577350269189, 0.577350269189); glVertex3d( radius,-radius, 0.0 ); glVertex3d( radius, 0.0, radius ); glVertex3d( 0.0,-radius, radius );
+    glNormal3d( 0.577350269189,-0.577350269189,-0.577350269189); glVertex3d( radius,-radius, 0.0 ); glVertex3d( 0.0,-radius,-radius ); glVertex3d( radius, 0.0,-radius );
+    glNormal3d(-0.577350269189, 0.577350269189, 0.577350269189); glVertex3d(-radius, radius, 0.0 ); glVertex3d(-radius, 0.0, radius ); glVertex3d( 0.0, radius, radius );
+    glNormal3d(-0.577350269189, 0.577350269189,-0.577350269189); glVertex3d(-radius, radius, 0.0 ); glVertex3d( 0.0, radius,-radius ); glVertex3d(-radius, 0.0,-radius );
+    glNormal3d(-0.577350269189,-0.577350269189, 0.577350269189); glVertex3d(-radius,-radius, 0.0 ); glVertex3d( 0.0,-radius, radius ); glVertex3d(-radius, 0.0, radius );
+    glNormal3d(-0.577350269189,-0.577350269189,-0.577350269189); glVertex3d(-radius,-radius, 0.0 ); glVertex3d(-radius, 0.0,-radius ); glVertex3d( 0.0,-radius,-radius );
   glEnd();
 
   glBegin( GL_QUADS );
-    glNormal3d( 1.0, 0.0, 0.0 ); glVertex3d( RADIUS, RADIUS, 0.0 ); glVertex3d( RADIUS, 0.0, RADIUS ); glVertex3d( RADIUS,-RADIUS, 0.0 ); glVertex3d( RADIUS, 0.0,-RADIUS );
-    glNormal3d(-1.0, 0.0, 0.0 ); glVertex3d(-RADIUS, RADIUS, 0.0 ); glVertex3d(-RADIUS, 0.0,-RADIUS ); glVertex3d(-RADIUS,-RADIUS, 0.0 ); glVertex3d(-RADIUS, 0.0, RADIUS );
-    glNormal3d( 0.0, 1.0, 0.0 ); glVertex3d( RADIUS, RADIUS, 0.0 ); glVertex3d( 0.0, RADIUS,-RADIUS ); glVertex3d(-RADIUS, RADIUS, 0.0 ); glVertex3d( 0.0, RADIUS, RADIUS );
-    glNormal3d( 0.0,-1.0, 0.0 ); glVertex3d( RADIUS,-RADIUS, 0.0 ); glVertex3d( 0.0,-RADIUS, RADIUS ); glVertex3d(-RADIUS,-RADIUS, 0.0 ); glVertex3d( 0.0,-RADIUS,-RADIUS );
-    glNormal3d( 0.0, 0.0, 1.0 ); glVertex3d( RADIUS, 0.0, RADIUS ); glVertex3d( 0.0, RADIUS, RADIUS ); glVertex3d(-RADIUS, 0.0, RADIUS ); glVertex3d( 0.0,-RADIUS, RADIUS );
-    glNormal3d( 0.0, 0.0,-1.0 ); glVertex3d( RADIUS, 0.0,-RADIUS ); glVertex3d( 0.0,-RADIUS,-RADIUS ); glVertex3d(-RADIUS, 0.0,-RADIUS ); glVertex3d( 0.0, RADIUS,-RADIUS );
+    glNormal3d( 1.0, 0.0, 0.0 ); glVertex3d( radius, radius, 0.0 ); glVertex3d( radius, 0.0, radius ); glVertex3d( radius,-radius, 0.0 ); glVertex3d( radius, 0.0,-radius );
+    glNormal3d(-1.0, 0.0, 0.0 ); glVertex3d(-radius, radius, 0.0 ); glVertex3d(-radius, 0.0,-radius ); glVertex3d(-radius,-radius, 0.0 ); glVertex3d(-radius, 0.0, radius );
+    glNormal3d( 0.0, 1.0, 0.0 ); glVertex3d( radius, radius, 0.0 ); glVertex3d( 0.0, radius,-radius ); glVertex3d(-radius, radius, 0.0 ); glVertex3d( 0.0, radius, radius );
+    glNormal3d( 0.0,-1.0, 0.0 ); glVertex3d( radius,-radius, 0.0 ); glVertex3d( 0.0,-radius, radius ); glVertex3d(-radius,-radius, 0.0 ); glVertex3d( 0.0,-radius,-radius );
+    glNormal3d( 0.0, 0.0, 1.0 ); glVertex3d( radius, 0.0, radius ); glVertex3d( 0.0, radius, radius ); glVertex3d(-radius, 0.0, radius ); glVertex3d( 0.0,-radius, radius );
+    glNormal3d( 0.0, 0.0,-1.0 ); glVertex3d( radius, 0.0,-radius ); glVertex3d( 0.0,-radius,-radius ); glVertex3d(-radius, 0.0,-radius ); glVertex3d( 0.0, radius,-radius );
   glEnd();
 }
 
 static void drawWireCuboctahedron(void)
 {
+  GLfloat radius = RADIUSFAC*(GLfloat)orad; /* orad doubles as size */
   glBegin( GL_LINE_LOOP );
-    glNormal3d( 1.0, 0.0, 0.0 ); glVertex3d( RADIUS, RADIUS, 0.0 ); glVertex3d( RADIUS, 0.0, RADIUS ); glVertex3d( RADIUS,-RADIUS, 0.0 ); glVertex3d( RADIUS, 0.0,-RADIUS );
+    glNormal3d( 1.0, 0.0, 0.0 ); glVertex3d( radius, radius, 0.0 ); glVertex3d( radius, 0.0, radius ); glVertex3d( radius,-radius, 0.0 ); glVertex3d( radius, 0.0,-radius );
   glEnd();
   glBegin( GL_LINE_LOOP );
-    glNormal3d(-1.0, 0.0, 0.0 ); glVertex3d(-RADIUS, RADIUS, 0.0 ); glVertex3d(-RADIUS, 0.0,-RADIUS ); glVertex3d(-RADIUS,-RADIUS, 0.0 ); glVertex3d(-RADIUS, 0.0, RADIUS );
+    glNormal3d(-1.0, 0.0, 0.0 ); glVertex3d(-radius, radius, 0.0 ); glVertex3d(-radius, 0.0,-radius ); glVertex3d(-radius,-radius, 0.0 ); glVertex3d(-radius, 0.0, radius );
   glEnd();
   glBegin( GL_LINE_LOOP );
-    glNormal3d( 0.0, 1.0, 0.0 ); glVertex3d( RADIUS, RADIUS, 0.0 ); glVertex3d( 0.0, RADIUS,-RADIUS ); glVertex3d(-RADIUS, RADIUS, 0.0 ); glVertex3d( 0.0, RADIUS, RADIUS );
+    glNormal3d( 0.0, 1.0, 0.0 ); glVertex3d( radius, radius, 0.0 ); glVertex3d( 0.0, radius,-radius ); glVertex3d(-radius, radius, 0.0 ); glVertex3d( 0.0, radius, radius );
   glEnd();
   glBegin( GL_LINE_LOOP );
-    glNormal3d( 0.0,-1.0, 0.0 ); glVertex3d( RADIUS,-RADIUS, 0.0 ); glVertex3d( 0.0,-RADIUS, RADIUS ); glVertex3d(-RADIUS,-RADIUS, 0.0 ); glVertex3d( 0.0,-RADIUS,-RADIUS );
+    glNormal3d( 0.0,-1.0, 0.0 ); glVertex3d( radius,-radius, 0.0 ); glVertex3d( 0.0,-radius, radius ); glVertex3d(-radius,-radius, 0.0 ); glVertex3d( 0.0,-radius,-radius );
   glEnd();
   glBegin( GL_LINE_LOOP );
-    glNormal3d( 0.0, 0.0, 1.0 ); glVertex3d( RADIUS, 0.0, RADIUS ); glVertex3d( 0.0, RADIUS, RADIUS ); glVertex3d(-RADIUS, 0.0, RADIUS ); glVertex3d( 0.0,-RADIUS, RADIUS );
+    glNormal3d( 0.0, 0.0, 1.0 ); glVertex3d( radius, 0.0, radius ); glVertex3d( 0.0, radius, radius ); glVertex3d(-radius, 0.0, radius ); glVertex3d( 0.0,-radius, radius );
   glEnd();
   glBegin( GL_LINE_LOOP );
-    glNormal3d( 0.0, 0.0,-1.0 ); glVertex3d( RADIUS, 0.0,-RADIUS ); glVertex3d( 0.0,-RADIUS,-RADIUS ); glVertex3d(-RADIUS, 0.0,-RADIUS ); glVertex3d( 0.0, RADIUS,-RADIUS );
+    glNormal3d( 0.0, 0.0,-1.0 ); glVertex3d( radius, 0.0,-radius ); glVertex3d( 0.0,-radius,-radius ); glVertex3d(-radius, 0.0,-radius ); glVertex3d( 0.0, radius,-radius );
   glEnd();
 }
 
-#undef RADIUS
+#undef RADIUSFAC
 
 /*
  * This structure defines an entry in our function-table.
@@ -152,29 +194,30 @@ typedef struct
     const char * const name;
     void (*solid) (void);
     void (*wire)  (void);
+    int drawSizeInfoFlag;
 } entry;
 
-#define ENTRY(e) {#e, drawSolid##e, drawWire##e}
+#define ENTRY(e,f) {#e, drawSolid##e, drawWire##e,f}
 static const entry table [] =
 {
-    ENTRY (Tetrahedron),
-    ENTRY (Cube),
-    ENTRY (Octahedron),
-    ENTRY (Dodecahedron),
-    ENTRY (RhombicDodecahedron),
-    ENTRY (Icosahedron),
-    ENTRY (SierpinskiSponge),
-    ENTRY (Teapot),
-    ENTRY (Torus),
-    ENTRY (Sphere),
-    ENTRY (Cone),
-    ENTRY (Cylinder),
-    ENTRY (Cuboctahedron)
+    ENTRY (Tetrahedron,GEO_NO_SIZE),
+    ENTRY (Cube,GEO_SIZE),
+    ENTRY (Octahedron,GEO_NO_SIZE),
+    ENTRY (Dodecahedron,GEO_NO_SIZE),
+    ENTRY (RhombicDodecahedron,GEO_NO_SIZE),
+    ENTRY (Icosahedron,GEO_NO_SIZE),
+    ENTRY (SierpinskiSponge,GEO_SCALE),
+    ENTRY (Teapot,GEO_SIZE),
+    ENTRY (Torus,GEO_INNER_OUTER_RAD),
+    ENTRY (Sphere,GEO_RAD),
+    ENTRY (Cone,GEO_BASE_HEIGHT),
+    ENTRY (Cylinder,GEO_RAD_HEIGHT),
+    ENTRY (Cuboctahedron,GEO_SIZE)   /* This one doesn't work when in shader mode and is then skipped */
 };
 #undef ENTRY
 
 /*!
-    Does printf()-like work using freeglut/OpenGLUT
+    Does printf()-like work using freeglut
     glutBitmapString().  Uses a fixed font.  Prints
     at the indicated row/column position.
 
@@ -210,7 +253,7 @@ static void shapesPrintf (int row, int col, const char *fmt, ...)
         glRasterPos2i
         (
               glutBitmapWidth(font, ' ') * col,
-            - glutBitmapHeight(font) * (row+2) + viewport[3]
+            - glutBitmapHeight(font) * row + viewport[3]
         );
         glutBitmapString (font, (unsigned char*)buf);
 
@@ -219,29 +262,80 @@ static void shapesPrintf (int row, int col, const char *fmt, ...)
     glPopMatrix();
 }
 
-/* GLUT callback Handlers */
+/* Print info about the about the current shape and render state on the screen */
+static void DrawSizeInfo(int *row)
+{
+    switch (table [function_index].drawSizeInfoFlag)
+    {
+    case GEO_NO_SIZE:
+        break;
+    case GEO_SIZE:
+        shapesPrintf ((*row)++, 1, "Size  Up  Down : %f", orad);
+        break;
+    case GEO_SCALE:
+        shapesPrintf ((*row)++, 1, "Scale  Up  Down : %f", orad);
+        break;
+    case GEO_INNER_OUTER_RAD:
+        shapesPrintf ((*row)++, 1, "Inner radius Left Right: %f", irad);
+        shapesPrintf ((*row)++, 1, "Outer radius  Up  Down : %f", orad);
+        break;
+    case GEO_RAD:
+        shapesPrintf ((*row)++, 1, "Radius  Up  Down : %f", orad);
+        break;
+    case GEO_BASE_HEIGHT:
+        shapesPrintf ((*row)++, 1, "Base   Left Right: %f", irad);
+        shapesPrintf ((*row)++, 1, "Height  Up  Down : %f", orad);
+        break;
+    case GEO_RAD_HEIGHT:
+        shapesPrintf ((*row)++, 1, "Radius Left Right: %f", irad);
+        shapesPrintf ((*row)++, 1, "Height  Up  Down : %f", orad);
+        break;
+    }
+}
 
+static void drawInfo()
+{
+    int row = 1;
+    shapesPrintf (row++, 1, "Shape PgUp PgDn: %s", table [function_index].name);
+    shapesPrintf (row++, 1, "Slices +-: %d   Stacks <>: %d", slices, stacks);
+    shapesPrintf (row++, 1, "nSides +-: %d   nRings <>: %d", slices, stacks);
+    shapesPrintf (row++, 1, "Depth  (): %d", depth);
+    DrawSizeInfo(&row);
+    if (persProject)
+        shapesPrintf (row++, 1, "Perspective projection (p)");
+    else
+        shapesPrintf (row++, 1, "Orthographic projection (p)");
+    if (animateXRot)
+        shapesPrintf (row++, 1, "2D rotation (r)");
+    else
+        shapesPrintf (row++, 1, "1D rotation (r)");
+}
+
+/* GLUT callback Handlers */
 static void
 resize(int width, int height)
 {
-    const float ar = (float) width / (float) height;
+    ar = (float) width / (float) height;
 
     glViewport(0, 0, width, height);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glFrustum(-ar, ar, -1.0, 1.0, 2.0, 100.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity() ;
 }
 
 static void display(void)
 {
     const double t = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
-    const double a = t*90.0;
+    const double a = t*89.0;
+    const double b = (animateXRot?t:1)*67.0;
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    if (persProject)
+        glFrustum(-ar, ar, -1.0, 1.0, 2.0, 100.0);
+    else
+        glOrtho(-ar*3, ar*3, -3.0, 3.0, 2.0, 100.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
 
     glEnable(GL_LIGHTING);
 
@@ -249,14 +343,14 @@ static void display(void)
 
     glPushMatrix();
         glTranslated(0,1.2,-6);
-        glRotated(60,1,0,0);
+        glRotated(b,1,0,0);
         glRotated(a,0,0,1);
         table [function_index].solid ();
     glPopMatrix();
 
     glPushMatrix();
         glTranslated(0,-1.2,-6);
-        glRotated(60,1,0,0);
+        glRotated(b,1,0,0);
         glRotated(a,0,0,1);
         table [function_index].wire ();
     glPopMatrix();
@@ -264,16 +358,12 @@ static void display(void)
     glDisable(GL_LIGHTING);
     glColor3d(0.1,0.1,0.4);
 
-    if( show_info ) {
-        shapesPrintf (1, 3, "Shape PgUp PgDn: %s", table [function_index].name);
-        shapesPrintf (2, 3, "Slices +-: %d   Stacks <>: %d", slices, stacks);
-        shapesPrintf (3, 3, "nSides +-: %d   nRings <>: %d", slices, stacks);
-        shapesPrintf (4, 3, "Depth  (): %d", depth);
-        shapesPrintf (5, 3, "Outer radius  Up  Down : %f", orad);
-        shapesPrintf (6, 3, "Inner radius Left Right: %f", irad);
-    } else {
+    if( show_info )
+        /* print info to screen */
+        drawInfo();
+    else
+        /* print to command line instead */
         printf ( "Shape %d slides %d stacks %d\n", function_index, slices, stacks ) ;
-    }
 
     glutSwapBuffers();
 }
@@ -289,7 +379,7 @@ key(unsigned char key, int x, int y)
     case 'q': glutLeaveMainLoop () ;      break;
 
     case 'I':
-    case 'i': show_info = ( show_info == GL_TRUE ) ? GL_FALSE : GL_TRUE; break;
+    case 'i': show_info=!show_info;       break;
 
     case '=':
     case '+': slices++;                   break;
@@ -308,6 +398,12 @@ key(unsigned char key, int x, int y)
 
     case '0': 
     case ')': ++depth;                    break;
+
+    case 'P':
+    case 'p': persProject=!persProject;   break;
+
+    case 'R':
+    case 'r': animateXRot=!animateXRot;   break;
 
     default:
         break;
@@ -361,12 +457,12 @@ const GLfloat high_shininess[] = { 100.0f };
 int
 main(int argc, char *argv[])
 {
-    glutInitWindowSize(640,480);
+    glutInitWindowSize(800,600);
     glutInitWindowPosition(40,40);
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
 
-    glutCreateWindow("OpenGLUT Shapes");
+    glutCreateWindow("FreeGLUT Shapes");
 
     glutReshapeFunc(resize);
     glutDisplayFunc(display);

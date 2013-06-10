@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="PreBuildCmds;PreBuildTargets;Build;PostBuildCmds;PostBuildTargets" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="CoApp" >
+    <CoAppEtcDirectory>$(registry:HKEY_LOCAL_MACHINE\Software\Outercurve\CoApp.Powershell\etc)</CoAppEtcDirectory>
+  </PropertyGroup>
+  
+  <Import Condition="Exists('$(CoAppEtcDirectory)\common-variables.vcxproj')" Project="$(CoAppEtcDirectory)\common-variables.vcxproj" />
+  
+  
+  <PropertyGroup Label="ConfigurationSettings">
+    <!-- set to Application or DynamicLibrary (DynamicLibrary can get altered to StaticLibrary by PTK -->
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+
+    <!-- Common Compiler Defines (semicolon delimited) -->
+    <Defines>WIN32;_WINDOWS</Defines>
+    <Defines Condition="$(IS_DYNAMIC)">_USRDLL;FREEGLUT_EXPORTS;$(Defines)</Defines>
+	<Defines Condition="$(IS_STATIC) OR $(IS_LTCG)">_LIB;FREEGLUT_STATIC;$(Defines)</Defines>
+	<Defines Condition="$(IS_RELEASE)">NDEBUG;$(Defines)</Defines>
+
+    <!-- Additional Include folders (semicolon delimited) -->
+    <IncludeDirectories>..\include</IncludeDirectories>
+
+    <!-- Additional Library folders (semicolon delimited) -->
+    <LibraryDirectories></LibraryDirectories>
+
+    <!-- Libraries to Link with -->
+    <Libraries></Libraries>
+    
+    <!-- Batch script to run before Build-->
+    <PreBuild></PreBuild>
+
+    <!-- Batch script to run after Build-->
+    <PostBuild></PostBuild>
+
+    <!-- Targets to run before Build (semcolon delimited)-->
+    <PreBuildTargets></PreBuildTargets>
+
+    <!-- Targets to run before Build (semcolon delimited)-->
+    <PostBuildTargets></PostBuildTargets>
+  
+    <!-- for Dynamic libs, you can specify the Module .DEF file path -->
+    <ModuleDefinitionFile>..\src\freeglutdll.def</ModuleDefinitionFile>
+  </PropertyGroup>
+
+  <Import Condition="Exists('$(CoAppEtcDirectory)\common-header.vcxproj')" Project="$(CoAppEtcDirectory)\common-header.vcxproj" />
+    
+	<ItemDefinitionGroup><ClCompile>
+		<DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+	</ClCompile></ItemDefinitionGroup>
+  
+  <ItemGroup>
+    <!-- Include the source files to compile here -->
+    <ClCompile Include="..\src\freeglut_callbacks.c" />
+    <ClCompile Include="..\src\freeglut_cursor.c" />
+    <ClCompile Include="..\src\freeglut_display.c" />
+    <ClCompile Include="..\src\freeglut_ext.c" />
+    <ClCompile Include="..\src\freeglut_font.c" />
+    <ClCompile Include="..\src\freeglut_font_data.c" />
+    <ClCompile Include="..\src\freeglut_gamemode.c" />
+    <ClCompile Include="..\src\freeglut_geometry.c" />
+    <ClCompile Include="..\src\freeglut_glutfont_definitions.c" />
+    <ClCompile Include="..\src\freeglut_init.c" />
+    <ClCompile Include="..\src\freeglut_input_devices.c" />
+    <ClCompile Include="..\src\freeglut_joystick.c" />
+    <ClCompile Include="..\src\freeglut_main.c" />
+    <ClCompile Include="..\src\freeglut_menu.c" />
+    <ClCompile Include="..\src\freeglut_misc.c" />
+    <ClCompile Include="..\src\freeglut_overlay.c" />
+    <ClCompile Include="..\src\freeglut_spaceball.c" />
+    <ClCompile Include="..\src\freeglut_state.c" />
+    <ClCompile Include="..\src\freeglut_stroke_mono_roman.c" />
+    <ClCompile Include="..\src\freeglut_stroke_roman.c" />
+    <ClCompile Include="..\src\freeglut_structure.c" />
+    <ClCompile Include="..\src\freeglut_teapot.c" />
+    <ClCompile Include="..\src\freeglut_videoresize.c" />
+    <ClCompile Include="..\src\freeglut_window.c" />
+  </ItemGroup>
+
+  <Import Condition="Exists('$(CoAppEtcDirectory)\common-footer.vcxproj')" Project="$(CoAppEtcDirectory)\common-footer.vcxproj" />
+</Project>

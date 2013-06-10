@@ -30,6 +30,8 @@ int mousewheel_number = -1, mousewheel_direction = -1, mousewheel_x = -1, mousew
 int motion_x = -1, motion_y = -1, motion_seq = -1 ;
 int passivemotion_x = -1, passivemotion_y = -1, passivemotion_seq = -1 ;
 
+#define STRING_LENGTH   30
+
 static void
 bitmapPrintf (const char *fmt, ...)
 {
@@ -63,7 +65,7 @@ Display(void)
   glPushMatrix ();
   glLoadIdentity ();
   glColor3ub ( 0, 0, 0 );
-  glRasterPos2i ( 10, glutGet ( GLUT_WINDOW_HEIGHT ) - 10 );
+  glRasterPos2i ( 10, glutGet ( GLUT_WINDOW_HEIGHT ) - 20 );	/* 10pt margin above 10pt letters */
 
   if ( reshape_called )
   {
@@ -131,6 +133,34 @@ Display(void)
   glutSwapBuffers();
 }
 
+static void
+Warning(const char *fmt, va_list ap)
+{
+    printf("%6d Warning callback:\n");
+    
+    /* print warning message */
+    vprintf(fmt, ap);
+}
+
+static void
+Error(const char *fmt, va_list ap)
+{
+    char dummy_string[STRING_LENGTH];
+    printf("%6d Error callback:\n");
+    
+    /* print warning message */
+    vprintf(fmt, ap);
+
+    /* terminate program, after pause for input so user can see */
+    printf ( "Please enter something to exit: " );
+    fgets ( dummy_string, STRING_LENGTH, stdin );
+    
+    /* Call exit directly as freeglut is messed
+     * up internally when an error is called. 
+     */
+    exit(1);
+}
+
 static void 
 Reshape(int width, int height)
 {
@@ -141,6 +171,7 @@ Reshape(int width, int height)
   reshape_width = width ;
   reshape_height = height ;
   reshape_seq = sequence_number ;
+  glViewport(0,0,width,height);
   glutPostRedisplay () ;
 }
 
@@ -407,7 +438,9 @@ MenuDestroy( void )
   menudestroy_called = 1 ;
   printf ( "%6d Window %d MenuDestroy Callback\n",
             ++sequence_number, window ) ;
-  glutPostRedisplay () ;
+
+  if (window)   /* When destroyed when shutting down, not always a window defined... */
+    glutPostRedisplay () ;
 }
 
 static void 
@@ -428,16 +461,18 @@ static void Idle ( void )
 int 
 main(int argc, char *argv[])
 {
-#define STRING_LENGTH   10
   int freeglut_window, aux_window ;
   char dummy_string[STRING_LENGTH];
 
   int menuID, subMenuA, subMenuB;
 
+  glutInitWarningFunc(Warning);
+  glutInitErrorFunc(Error);
   glutInitWindowSize(500, 250);
   glutInitWindowPosition ( 140, 140 );
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE );
   glutInit(&argc, argv);
+  glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION);
 
   freeglut_window = glutCreateWindow( "Callback Demo" );
   printf ( "Creating window %d as 'Callback Demo'\n", freeglut_window ) ;
@@ -467,7 +502,6 @@ main(int argc, char *argv[])
   glutDialsFunc ( Dials ) ;
   glutTabletMotionFunc ( TabletMotion ) ;
   glutTabletButtonFunc ( TabletButton ) ;
-  glutMenuDestroyFunc ( MenuDestroy );
   glutMenuStatusFunc ( MenuStatus );
   glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF) ;
 
@@ -475,12 +509,14 @@ main(int argc, char *argv[])
   glutAddMenuEntry( "Sub menu A1 (01)", 1 );
   glutAddMenuEntry( "Sub menu A2 (02)", 2 );
   glutAddMenuEntry( "Sub menu A3 (03)", 3 );
+  glutMenuDestroyFunc ( MenuDestroy );
 
   subMenuB = glutCreateMenu( MenuCallback );
   glutAddMenuEntry( "Sub menu B1 (04)", 4 );
   glutAddMenuEntry( "Sub menu B2 (05)", 5 );
   glutAddMenuEntry( "Sub menu B3 (06)", 6 );
   glutAddSubMenu( "Going to sub menu A", subMenuA );
+  glutMenuDestroyFunc ( MenuDestroy );
 
   menuID = glutCreateMenu( MenuCallback );
   glutAddMenuEntry( "Entry one",   1 );
@@ -490,6 +526,7 @@ main(int argc, char *argv[])
   glutAddMenuEntry( "Entry five",  5 );
   glutAddSubMenu( "Enter sub menu A", subMenuA );
   glutAddSubMenu( "Enter sub menu B", subMenuB );
+  glutMenuDestroyFunc ( MenuDestroy );
 
   glutAttachMenu( GLUT_LEFT_BUTTON );
 

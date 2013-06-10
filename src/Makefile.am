@@ -38,14 +38,15 @@ lib@LIBRARY@_la_SOURCES = freeglut_callbacks.c \
 			 freeglut_structure.c \
 			 freeglut_teapot.c \
 			 freeglut_videoresize.c \
-			 freeglut_window.c
+			 freeglut_window.c \
+			 freeglut_xinput.c
 
 #
 # Additional linker flags
 #	 
-lib@LIBRARY@_la_LIBADD  = $(LIBM) $(X_LIBS) $(GL_LIBS) $(LIBXXF86VM) $(LIBXI)
+lib@LIBRARY@_la_LIBADD  = $(GL_LIBS) $(X_LIBS) $(LIBM) $(LIBUSBHID)
 lib@LIBRARY@_la_LDFLAGS = $(VERSION_INFO) -no-undefined
-lib@LIBRARY@_la_CFLAGS  = $(X_CFLAGS) $(EXPORT_FLAGS)
+lib@LIBRARY@_la_CFLAGS  = $(GL_FLAGS) $(X_CFLAGS) $(EXPORT_FLAGS)
 lib@LIBRARY@_la_CPPFLAGS= -I$(top_srcdir)/include
 
 #

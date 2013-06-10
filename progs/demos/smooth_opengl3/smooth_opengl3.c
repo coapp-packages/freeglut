@@ -53,7 +53,7 @@ void checkError(const char *functionName)
 {
    GLenum error;
    while (( error = glGetError() ) != GL_NO_ERROR) {
-      fprintf (stderr, "GL error 0x%X detected in %s\n", error, functionName);
+       fprintf (stderr, "GL error 0x%X detected in %s\n", error, functionName);
    }
 }
 
@@ -94,14 +94,20 @@ void checkError(const char *functionName)
 typedef ptrdiff_t ourGLsizeiptr;
 typedef char ourGLchar;
 
-#if defined(WIN32)
 #ifndef APIENTRY
 #define APIENTRY
 #endif
 
+#ifndef GL_ARB_vertex_array_object
+typedef void (APIENTRY *PFNGLGENVERTEXARRAYSPROC) (GLsizei n, GLuint *arrays);
+typedef void (APIENTRY *PFNGLBINDVERTEXARRAYPROC) (GLuint array);
+#endif
+#ifndef GL_VERSION_1_5
 typedef void (APIENTRY *PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);
 typedef void (APIENTRY *PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
 typedef void (APIENTRY *PFNGLBUFFERDATAPROC) (GLenum target, ourGLsizeiptr size, const GLvoid *data, GLenum usage);
+#endif
+#ifndef GL_VERSION_2_0
 typedef GLuint (APIENTRY *PFNGLCREATESHADERPROC) (GLenum type);
 typedef void (APIENTRY *PFNGLSHADERSOURCEPROC) (GLuint shader, GLsizei count, const ourGLchar **string, const GLint *length);
 typedef void (APIENTRY *PFNGLCOMPILESHADERPROC) (GLuint shader);
@@ -118,8 +124,10 @@ typedef void (APIENTRY *PFNGLVERTEXATTRIBPOINTERPROC) (GLuint index, GLint size,
 typedef void (APIENTRY *PFNGLENABLEVERTEXATTRIBARRAYPROC) (GLuint index);
 typedef GLint (APIENTRY *PFNGLGETUNIFORMLOCATIONPROC) (GLuint program, const ourGLchar *name);
 typedef void (APIENTRY *PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-#endif  /* defined(WIN32) */
+#endif
 
+PFNGLGENVERTEXARRAYSPROC gl_GenVertexArrays;
+PFNGLBINDVERTEXARRAYPROC gl_BindVertexArray;
 PFNGLGENBUFFERSPROC gl_GenBuffers;
 PFNGLBINDBUFFERPROC gl_BindBuffer;
 PFNGLBUFFERDATAPROC gl_BufferData;
@@ -140,11 +148,23 @@ PFNGLENABLEVERTEXATTRIBARRAYPROC gl_EnableVertexAttribArray;
 PFNGLGETUNIFORMLOCATIONPROC gl_GetUniformLocation;
 PFNGLUNIFORMMATRIX4FVPROC gl_UniformMatrix4fv;
 
-void initExtensionEntries(void) 
+void initExtensionEntries(void)
 {
+   gl_GenVertexArrays = (PFNGLGENVERTEXARRAYSPROC) glutGetProcAddress ("glGenVertexArrays");
+   gl_BindVertexArray = (PFNGLBINDVERTEXARRAYPROC) glutGetProcAddress ("glBindVertexArray");
+   if (!gl_GenVertexArrays || !gl_BindVertexArray)
+   {
+       fprintf (stderr, "glGenVertexArrays or glBindVertexArray not found");
+       exit(1);
+   }
    gl_GenBuffers = (PFNGLGENBUFFERSPROC) glutGetProcAddress ("glGenBuffers");
    gl_BindBuffer = (PFNGLBINDBUFFERPROC) glutGetProcAddress ("glBindBuffer");
    gl_BufferData = (PFNGLBUFFERDATAPROC) glutGetProcAddress ("glBufferData");
+   if (!gl_GenBuffers || !gl_BindBuffer || !gl_BufferData)
+   {
+       fprintf (stderr, "glGenBuffers, glBindBuffer or glBufferData not found");
+       exit(1);
+   }
    gl_CreateShader = (PFNGLCREATESHADERPROC) glutGetProcAddress ("glCreateShader");
    gl_ShaderSource = (PFNGLSHADERSOURCEPROC) glutGetProcAddress ("glShaderSource");
    gl_CompileShader = (PFNGLCOMPILESHADERPROC) glutGetProcAddress ("glCompileShader");
@@ -161,6 +181,11 @@ void initExtensionEntries(void)
    gl_EnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC) glutGetProcAddress ("glEnableVertexAttribArray");
    gl_GetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC) glutGetProcAddress ("glGetUniformLocation");
    gl_UniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC) glutGetProcAddress ("glUniformMatrix4fv");
+   if (!gl_CreateShader || !gl_ShaderSource || !gl_CompileShader || !gl_CreateProgram || !gl_AttachShader || !gl_LinkProgram || !gl_UseProgram || !gl_GetShaderiv || !gl_GetShaderInfoLog || !gl_GetProgramiv || !gl_GetProgramInfoLog || !gl_GetAttribLocation || !gl_VertexAttribPointer || !gl_EnableVertexAttribArray || !gl_GetUniformLocation || !gl_UniformMatrix4fv)
+   {
+       fprintf (stderr, "glCreateShader, glShaderSource, glCompileShader, glCreateProgram, glAttachShader, glLinkProgram, glUseProgram, glGetShaderiv, glGetShaderInfoLog, glGetProgramiv, glGetProgramInfoLog, glGetAttribLocation, glVertexAttribPointer, glEnableVertexAttribArray, glGetUniformLocation or glUniformMatrix4fv not found");
+       exit(1);
+   }
 }
 
 /* vertex array data for a colored 2D triangle, consisting of RGB color values
@@ -186,9 +211,17 @@ enum {
 
 /* the name of the vertex buffer object */
 GLuint vertexBufferName;
+GLuint vertexArrayName;
 
 void initBuffer(void)
 {
+   /* Need to setup a vertex array as otherwise invalid operation errors can
+    * occur when accessing vertex buffer (OpenGL 3.3 has no default zero named
+    * vertex array) 
+    */
+   gl_GenVertexArrays(1, &vertexArrayName);
+   gl_BindVertexArray(vertexArrayName);
+
    gl_GenBuffers (1, &vertexBufferName);
    gl_BindBuffer (GL_ARRAY_BUFFER, vertexBufferName);
    gl_BufferData (GL_ARRAY_BUFFER, sizeof(varray), varray, GL_STATIC_DRAW);

@@ -1,33 +1,34 @@
-#product-info  {
-    product-name: "freeglut";
-    version: "2.6.0";
-    original-source-location: "http://freeglut.sourceforge.net/index.php#download";
-    original-source-website: "http://freeglut.sourceforge.net/";
-    license: "See COPYING file";
-    packager: "Petter Strandmark";
-}
+@import default_tools;
 
+default {
+	(PlatformToolsets, Architectures, ReleaseOrDebug, Linkage, "freeglut.vcxproj, CallbackMaker.vcxproj, Fractals.vcxproj, Fractals_random.vcxproj, Lorenz.vcxproj, One.vcxproj, Resizer.vcxproj, shapes.vcxproj, smooth_opengl3.vcxproj, subwin.vcxproj" ) => {
+	
+	// 
+        .PushEnvironment{};
+        .LoadSystemEnvironment{};
+        .SetEnvironmentFromTarget.Target = "VC_${0}_${1}";
+        
+        .Message.Text = @"Environment vc_${0}_${1} -- ${2}  ${3}  *** IsValid => $(IsEnvironmentValid)";
 
-x64  {
-    compiler: vc10-x64 ;
- 
-    targets: { 
-				//Libraries
-				"VisualStudio2010\Release\freeglut.lib",
-				"VisualStudio2010Static\Release\freeglut_static.lib",
-				
-				//DLL
-				"VisualStudio2010\Release\freeglut.dll",
-			} ;
- 
-    build-command: @"
-			msbuild /p:Platform=x64 /p:Configuration=Release VisualStudio2010\freeglut.sln
-			msbuild /p:Platform=x64 /p:Configuration=Release VisualStudio2010Static\freeglut.sln
-			";
+        .Warning{
+            Condition="!$(IsEnvironmentValid)";
+            Text = @"********\r\nSKIPPING: vc_${0}_${1} -- ${2}  ${3}  ";
+        };
 
-    clean-command: @"
-			 rmdir /S /Q VisualStudio2010\Release 2>NUL
-			 rmdir /S /Q VisualStudio2010Static\Release  2>NUL
-			 set ERRORLEVEL=0 
-			";
-}
+        .Exec {
+            Condition="$(IsEnvironmentValid)";
+            Command = @"msbuild ${4} /p:PlatformToolset=${0};Platform=${1};Configuration=${2};UsesConfigurationType=${3}";
+        };
+
+        .PopEnvironment{};
+    };
+};
+
+clean {
+    .RemoveDir.Directories = @"intermediate";
+};
+
+nuke {
+    .RemoveDir.Directories = @"output";
+    .RemoveDir.Directories = @"intermediate";
+};

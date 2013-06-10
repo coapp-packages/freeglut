@@ -1,0 +1,75 @@
+
+PlatformToolsets : {
+	V110, V100
+};
+
+Architectures : {
+	Win32, x64
+};
+
+ReleaseOrDebug : {
+	Release, Debug
+};
+
+Linkage : {
+	Dynamic, Static, ltcg
+};
+
+
+nuget {
+    nuspec {
+        id: freeglut;
+        version: 2.8.1.0;
+        title: freeglut;
+        authors: {freeglut contributors,Garrett Serack};
+        owners: {Garrett Serack, CoApp Project};
+        licenseUrl: "https://github.com/coapp-packages/freeglut/blob/master/COPYING";
+        projectUrl: "https://github.com/coapp-packages/freeglut";
+        iconUrl: "http://freeglut.sourceforge.net/images/freeglut_logo.png";
+        requireLicenseAcceptance:false;
+        summary:"Freeglut, the Free openGL Utility Toolkit, is meant to be a free alternative to Mark Kilgard's GLUT library";
+        description: @"Freeglut, the Free openGL Utility Toolkit, is meant to be a free alter-
+    native to Mark Kilgard's GLUT library. It is distributed under an X-Consor-
+    tium style license (see COPYING for details), to offer you a chance to use
+    and/or modify the source.
+
+    It makes use of OpenGL, GLU, and pthreads-win32 libraries. The library does
+    not make use of any GLUT code and is not 100% compatible. Code recompilation
+    and/or slight modifications might be required for your applications to work
+    with freeglut.
+	
+	Original Project Location: http://freeglut.sourceforge.net/
+	";
+        releaseNotes: "";
+        copyright: Copyright 2013; 
+        tags: { freegut, native, CoApp };
+    };
+	
+	files { 
+		alsoInclude: {
+			#destination = ${d_include}\GL;
+			..\include\**\*.h
+		};
+		
+		source: {
+			..\src\**\*.c,
+		};
+		
+		(PlatformToolsets, Architectures, ReleaseOrDebug, Linkage) => {
+			[${0},${1},${2},${3}] {
+				lib:     { output\${0}\${1}\${2}\${3}\*.lib };
+			};
+		};
+		
+		(PlatformToolsets, Architectures, ReleaseOrDebug, "dynamic") => {
+			[${0},${1},${2},${3}] {
+				bin:     { output\${0}\${1}\${2}\${3}\*.dll };
+				symbols: { output\${0}\${1}\${2}\${3}\*.pdb };
+			};
+		};
+	};
+
+	targets {
+		Defines += HAS_FREEGLUT;
+	};
+};

@@ -64,16 +64,6 @@ static int fghGetConfig( int attribute )
 }
 #endif
 
-/* Check if the window is in full screen state. */
-static int fghCheckFullScreen(void)
-{
-#if TARGET_HOST_POSIX_X11
-    return fgStructure.CurrentWindow->State.IsFullscreen;
-#else
-    return 0;
-#endif
-}
-
 /* -- INTERFACE FUNCTIONS -------------------------------------------------- */
 
 /*
@@ -132,6 +122,10 @@ void FGAPIENTRY glutSetOption( GLenum eWhat, int value )
 
     case GLUT_MULTISAMPLE:
       fgState.SampleNumber = value;
+      break;
+
+    case GLUT_SKIP_STALE_MOTION_EVENTS:
+      fgState.SkipStaleMotion = value;
       break;
 
     default:
@@ -320,7 +314,7 @@ int FGAPIENTRY glutGet( GLenum eWhat )
         GLXFBConfig * fbconfig;
         int isPossible;
 
-        fbconfig = fgChooseFBConfig();
+        fbconfig = fgChooseFBConfig(NULL);
 
         if (fbconfig == NULL)
         {
@@ -444,7 +438,7 @@ int FGAPIENTRY glutGet( GLenum eWhat )
          *  behaviour, both under Windows and under UNIX/X11:
          *  - When you create a window with position (x,y) and size
          *    (w,h), the upper left hand corner of the outside of the
-         *    window is at (x,y) and the size of the drawable area  is
+         *    window is at (x,y) and the size of the drawable area is
          *    (w,h).
          *  - When you query the size and position of the window--as
          *    is happening here for Windows--"freeglut" will return
@@ -458,24 +452,24 @@ int FGAPIENTRY glutGet( GLenum eWhat )
 
         freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
 
-        /*
-         * We need to call GetWindowRect() first...
-         *  (this returns the pixel coordinates of the outside of the window)
-         */
+#if defined(_WIN32_WCE)
         GetWindowRect( fgStructure.CurrentWindow->Window.Handle, &winRect );
-
-        /* ...then we've got to correct the results we've just received... */
-
-#if !defined(_WIN32_WCE)
-        if ( ( fgStructure.GameModeWindow != fgStructure.CurrentWindow ) && ( fgStructure.CurrentWindow->Parent == NULL ) &&
-             ( ! fgStructure.CurrentWindow->IsMenu ) )
+#else
+        fghGetClientArea(&winRect,fgStructure.CurrentWindow, FALSE);
+        if (fgStructure.CurrentWindow->Parent && (eWhat==GLUT_WINDOW_X || eWhat==GLUT_WINDOW_Y))
         {
-          winRect.left   += GetSystemMetrics( SM_CXSIZEFRAME );
-          winRect.right  -= GetSystemMetrics( SM_CXSIZEFRAME );
-          winRect.top    += GetSystemMetrics( SM_CYSIZEFRAME ) + GetSystemMetrics( SM_CYCAPTION );
-          winRect.bottom -= GetSystemMetrics( SM_CYSIZEFRAME );
+            /* For child window, we should return relative to upper-left
+             *  of parent's client area.
+             */
+            POINT topleft;
+            topleft.x = winRect.left;
+            topleft.y = winRect.top;
+            
+            ScreenToClient(fgStructure.CurrentWindow->Parent->Window.Handle,&topleft);
+            winRect.left = topleft.x;
+            winRect.top  = topleft.y;
         }
-#endif /* !defined(_WIN32_WCE) */
+#endif /* defined(_WIN32_WCE) */
 
         switch( eWhat )
         {
@@ -488,17 +482,49 @@ int FGAPIENTRY glutGet( GLenum eWhat )
     break;
 
     case GLUT_WINDOW_BORDER_WIDTH :
+    case GLUT_WINDOW_BORDER_HEIGHT :
 #if defined(_WIN32_WCE)
         return 0;
 #else
-        return GetSystemMetrics( SM_CXSIZEFRAME );
-#endif /* !defined(_WIN32_WCE) */
+        {
+            /* We can't get the border width or header height in the simple way
+             * with some calls to GetSystemMetrics. We'd then have to assume which
+             * elements are present for a given decoration, and such calculations
+             * wouldn't be valid for every version of Windows. The below should be
+             * robust. */
+            int borderWidth, captionHeight;
+            DWORD windowStyle, windowExStyle;
+            RECT clientRect, winRect;
 
-    case GLUT_WINDOW_HEADER_HEIGHT :
-#if defined(_WIN32_WCE)
-        return 0;
-#else
-        return GetSystemMetrics( SM_CYCAPTION );
+            /* Get style of window, or default style */
+            fghGetStyleFromWindow( fgStructure.CurrentWindow, &windowStyle, &windowExStyle );
+            /* Get client area if any window */
+            if (fgStructure.CurrentWindow && fgStructure.CurrentWindow->Window.Handle)
+                fghGetClientArea(&clientRect,fgStructure.CurrentWindow,FALSE);
+            else
+                SetRect(&clientRect,0,0,200,200);
+
+            /* Compute window rect (including non-client area) */
+            CopyRect(&winRect,&clientRect);
+            fghComputeWindowRectFromClientArea_UseStyle(&winRect,windowStyle,windowExStyle,FALSE);
+
+            /* Calculate border width by taking width of whole window minus width of client area and divide by two
+             * NB: we assume horizontal and vertical borders have the same size, which should always be the case
+             * unless the user bypassed FreeGLUT and messed with the windowstyle himself.
+             * Once borderwidth is known, account for it when comparing height of window to height of client area.
+             * all other extra pixels are assumed to be atop the window, forming the caption.
+             */
+            borderWidth   = ((winRect.right-winRect.left)-(clientRect.right-clientRect.left))/2;
+            captionHeight = (winRect.bottom-winRect.top)-(clientRect.bottom-clientRect.top)-borderWidth*2;
+
+            switch( eWhat )
+            {
+            case GLUT_WINDOW_BORDER_WIDTH:
+                return borderWidth;
+            case GLUT_WINDOW_BORDER_HEIGHT:
+                return captionHeight;
+            }
+        }
 #endif /* defined(_WIN32_WCE) */
 
     case GLUT_DISPLAY_MODE_POSSIBLE:
@@ -554,13 +580,16 @@ int FGAPIENTRY glutGet( GLenum eWhat )
         return fgState.DirectContext;
 
     case GLUT_FULL_SCREEN:
-        return fghCheckFullScreen();
+        return fgStructure.CurrentWindow->State.IsFullscreen;
 
     case GLUT_AUX:
       return fgState.AuxiliaryBufferNumber;
 
     case GLUT_MULTISAMPLE:
       return fgState.SampleNumber;
+
+    case GLUT_SKIP_STALE_MOTION_EVENTS:
+      return fgState.SkipStaleMotion;
 
     default:
         fgWarning( "glutGet(): missing enum handle %d", eWhat );
