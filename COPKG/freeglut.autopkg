@@ -19,7 +19,7 @@ Linkage : {
 nuget {
     nuspec {
         id: freeglut;
-        version: 2.8.1.0;
+        version: 2.8.1.1;
         title: freeglut;
         authors: {freeglut contributors,Garrett Serack};
         owners: {Garrett Serack, CoApp Project};
